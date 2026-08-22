@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import RichEditor from '../components/RichEditor';
 
 const TABS = [
   ['dashboard', 'Dashboard'],
@@ -32,6 +33,7 @@ export default function AdminPage() {
   const [blogs, setBlogs] = useState([]);
   const [stats, setStats] = useState(null);
   const [editor, setEditor] = useState(null);
+  const [postContent, setPostContent] = useState('');
   const [msg, setMsg] = useState('');
   const [settings, setSettings] = useState({});
   const [ads, setAds] = useState({});
@@ -65,6 +67,16 @@ export default function AdminPage() {
     });
   }, []);
 
+  function openEditor(post) {
+    if (!post) {
+      setEditor({ id: null, title: '', slug: '', excerpt: '', content: '', author: 'Admin', published: true });
+      setPostContent('');
+    } else {
+      setEditor(post);
+      setPostContent(post.content || '');
+    }
+  }
+
   async function handleLogin(e) {
     e.preventDefault();
     setLoginError('');
@@ -95,11 +107,7 @@ export default function AdminPage() {
     Array.from(form.elements).forEach((el) => {
       if (el.name) next[el.name] = el.value;
     });
-    await fetch('/api/settings', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ settings: next }),
-    });
+    await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ settings: next }) });
     setSettings((s) => ({ ...s, ...next }));
     flash('Homepage texts saved');
   }
@@ -111,11 +119,7 @@ export default function AdminPage() {
     AD_FIELDS.forEach(([k]) => {
       next[k] = form.elements[k]?.value || '';
     });
-    await fetch('/api/settings', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ads: next }),
-    });
+    await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ads: next }) });
     setAds(next);
     flash('Ad codes saved');
   }
@@ -128,11 +132,7 @@ export default function AdminPage() {
       bodyStart: form.elements.bodyStart.value,
       bodyEnd: form.elements.bodyEnd.value,
     };
-    await fetch('/api/settings', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ scripts: next }),
-    });
+    await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ scripts: next }) });
     setScripts(next);
     flash('Scripts saved');
   }
@@ -169,7 +169,7 @@ export default function AdminPage() {
       title: form.title.value,
       slug: form.slug.value,
       excerpt: form.excerpt.value,
-      content: form.content.value,
+      content: postContent,
       author: form.author.value || 'Admin',
       published: form.published.checked,
     };
@@ -179,6 +179,7 @@ export default function AdminPage() {
       await fetch('/api/blogs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
     }
     setEditor(null);
+    setPostContent('');
     flash('Post saved');
     loadAll();
   }
@@ -245,12 +246,7 @@ export default function AdminPage() {
             </div>
             <div className="bg-white rounded-xl border p-6 shadow-sm">
               <h2 className="font-bold text-lg mb-2">Control center</h2>
-              <p className="text-sm text-gray-600 mb-4">Edit homepage copy, ad slots, analytics/meta scripts, blog posts, and your admin password from the tabs above.</p>
-              <div className="flex flex-wrap gap-2">
-                {TABS.filter(([id]) => id !== 'dashboard').map(([id, label]) => (
-                  <button key={id} onClick={() => setTab(id)} className="px-3 py-1.5 text-sm rounded-lg bg-gray-50 border hover:border-green-300">{label}</button>
-                ))}
-              </div>
+              <p className="text-sm text-gray-600 mb-4">Manage content, ads, scripts, and users from the tabs above.</p>
             </div>
           </div>
         )}
@@ -258,8 +254,7 @@ export default function AdminPage() {
         {tab === 'content' && (
           <form onSubmit={saveSettings} className="bg-white border rounded-xl p-6 space-y-3 shadow-sm">
             <h2 className="font-bold text-lg mb-2">Homepage texts</h2>
-            <p className="text-sm text-gray-500 mb-4">These appear on the public homepage. Saved on the server.</p>
-            {[ ['siteName', 'Site name'], ['heroBadge', 'Hero badge'], ['heroTitle', 'Hero title'], ['heroHighlight', 'Hero highlight (green)'], ['heroSubtitle', 'Hero subtitle'], ['auditButton', 'Audit button label'], ['howTitle', 'How it works title'], ['howSubtitle', 'How it works subtitle'], ['checklistTitle', 'Checklist section title'], ['faqTitle', 'FAQ title'], ['footerNote', 'Footer note'] ].map(([name, label]) => (
+            {[ ['siteName', 'Site name'], ['heroBadge', 'Hero badge'], ['heroTitle', 'Hero title'], ['heroHighlight', 'Hero highlight'], ['heroSubtitle', 'Hero subtitle'], ['auditButton', 'Audit button'], ['howTitle', 'How title'], ['howSubtitle', 'How subtitle'], ['checklistTitle', 'Checklist title'], ['faqTitle', 'FAQ title'], ['footerNote', 'Footer note'] ].map(([name, label]) => (
               <div key={name}>
                 <label className="text-xs font-medium text-gray-500">{label}</label>
                 {name.includes('Subtitle') || name === 'footerNote' || name === 'heroSubtitle' ? (
@@ -276,11 +271,10 @@ export default function AdminPage() {
         {tab === 'ads' && (
           <form onSubmit={saveAds} className="bg-white border rounded-xl p-6 space-y-4 shadow-sm">
             <h2 className="font-bold text-lg">Ad codes</h2>
-            <p className="text-sm text-gray-500">Paste AdSense or other ad unit HTML. Leave blank to hide a slot.</p>
             {AD_FIELDS.map(([name, label]) => (
               <div key={name}>
                 <label className="text-sm font-medium">{label}</label>
-                <textarea name={name} defaultValue={ads[name] || ''} rows={3} className="w-full border rounded-lg px-3 py-2 text-sm font-mono mt-1" placeholder="<!-- ad code -->" />
+                <textarea name={name} defaultValue={ads[name] || ''} rows={3} className="w-full border rounded-lg px-3 py-2 text-sm font-mono mt-1" />
               </div>
             ))}
             <button type="submit" className="px-6 py-2.5 bg-green-600 text-white rounded-xl font-medium">Save ad codes</button>
@@ -289,19 +283,18 @@ export default function AdminPage() {
 
         {tab === 'scripts' && (
           <form onSubmit={saveScripts} className="bg-white border rounded-xl p-6 space-y-4 shadow-sm">
-            <h2 className="font-bold text-lg">Analytics, verification and head scripts</h2>
-            <p className="text-sm text-gray-500">Google Analytics, Search Console verification meta, Tag Manager, custom head tags, etc.</p>
+            <h2 className="font-bold text-lg">Analytics and verification scripts</h2>
             <div>
-              <label className="text-sm font-medium">Head scripts / meta (document head)</label>
-              <textarea name="head" defaultValue={scripts.head || ''} rows={5} className="w-full border rounded-lg px-3 py-2 text-sm font-mono mt-1" placeholder={'Meta verification tags and analytics scripts'} />
+              <label className="text-sm font-medium">Head scripts / meta</label>
+              <textarea name="head" defaultValue={scripts.head || ''} rows={5} className="w-full border rounded-lg px-3 py-2 text-sm font-mono mt-1" />
             </div>
             <div>
               <label className="text-sm font-medium">Body start</label>
-              <textarea name="bodyStart" defaultValue={scripts.bodyStart || ''} rows={3} className="w-full border rounded-lg px-3 py-2 text-sm font-mono mt-1" placeholder="GTM noscript, etc." />
+              <textarea name="bodyStart" defaultValue={scripts.bodyStart || ''} rows={3} className="w-full border rounded-lg px-3 py-2 text-sm font-mono mt-1" />
             </div>
             <div>
               <label className="text-sm font-medium">Body end</label>
-              <textarea name="bodyEnd" defaultValue={scripts.bodyEnd || ''} rows={3} className="w-full border rounded-lg px-3 py-2 text-sm font-mono mt-1" placeholder="Chat widgets, extra scripts" />
+              <textarea name="bodyEnd" defaultValue={scripts.bodyEnd || ''} rows={3} className="w-full border rounded-lg px-3 py-2 text-sm font-mono mt-1" />
             </div>
             <button type="submit" className="px-6 py-2.5 bg-green-600 text-white rounded-xl font-medium">Save scripts</button>
           </form>
@@ -311,19 +304,23 @@ export default function AdminPage() {
           <div>
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">Blog posts</h2>
-              <button onClick={() => setEditor({ id: null, title: '', slug: '', excerpt: '', content: '', author: 'Admin', published: true })} className="px-4 py-2 bg-green-600 text-white text-sm rounded-xl">+ New post</button>
+              <button onClick={() => openEditor(null)} className="px-4 py-2 bg-green-600 text-white text-sm rounded-xl">+ New post</button>
             </div>
             {editor && (
               <form onSubmit={savePost} className="bg-white border rounded-xl p-6 mb-6 space-y-3 shadow-sm">
+                <p className="text-sm text-gray-500">Rich editor (headings, lists, links, images, tables — similar to WordPress)</p>
                 <input name="title" defaultValue={editor.title} required placeholder="Title" className="w-full border rounded-lg px-3 py-2 text-sm" />
                 <input name="slug" defaultValue={editor.slug} placeholder="url-slug" className="w-full border rounded-lg px-3 py-2 text-sm font-mono" />
                 <input name="author" defaultValue={editor.author} placeholder="Author" className="w-full border rounded-lg px-3 py-2 text-sm" />
-                <textarea name="excerpt" defaultValue={editor.excerpt} placeholder="Excerpt" rows={2} className="w-full border rounded-lg px-3 py-2 text-sm" />
-                <textarea name="content" defaultValue={editor.content} placeholder="HTML content" rows={8} className="w-full border rounded-lg px-3 py-2 text-sm font-mono" />
+                <textarea name="excerpt" defaultValue={editor.excerpt} placeholder="Short excerpt" rows={2} className="w-full border rounded-lg px-3 py-2 text-sm" />
+                <div>
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">Post body</label>
+                  <RichEditor key={editor.id || 'new'} value={postContent} onChange={setPostContent} height={440} />
+                </div>
                 <label className="flex items-center gap-2 text-sm"><input name="published" type="checkbox" defaultChecked={editor.published} /> Published</label>
                 <div className="flex gap-2">
-                  <button type="submit" className="px-5 py-2 bg-green-600 text-white text-sm rounded-xl">Save</button>
-                  <button type="button" onClick={() => setEditor(null)} className="px-5 py-2 bg-gray-100 text-sm rounded-xl">Cancel</button>
+                  <button type="submit" className="px-5 py-2 bg-green-600 text-white text-sm rounded-xl">Save post</button>
+                  <button type="button" onClick={() => { setEditor(null); setPostContent(''); }} className="px-5 py-2 bg-gray-100 text-sm rounded-xl">Cancel</button>
                 </div>
               </form>
             )}
@@ -335,7 +332,7 @@ export default function AdminPage() {
                     <div className="text-xs text-gray-500">{b.createdAt?.slice(0, 10)} · /{b.slug} · {b.published ? 'Published' : 'Draft'}</div>
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={() => setEditor(b)} className="text-xs px-3 py-1.5 rounded-lg bg-gray-100">Edit</button>
+                    <button onClick={() => openEditor(b)} className="text-xs px-3 py-1.5 rounded-lg bg-gray-100">Edit</button>
                     <button onClick={() => deletePost(b.id)} className="text-xs px-3 py-1.5 rounded-lg bg-red-50 text-red-600">Delete</button>
                   </div>
                 </div>
@@ -345,21 +342,19 @@ export default function AdminPage() {
         )}
 
         {tab === 'users' && (
-          <div className="space-y-6">
-            <div className="bg-white border rounded-xl p-6 shadow-sm">
-              <h2 className="font-bold text-lg mb-4">Admin account</h2>
-              <div className="border rounded-lg p-4 flex justify-between items-center mb-6">
-                <div><div className="font-medium">{user.name || 'Admin'}</div><div className="text-sm text-gray-500">{user.email} · role: admin</div></div>
-                <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">Active</span>
-              </div>
-              <h3 className="font-semibold mb-3">Change password</h3>
-              <form onSubmit={changePassword} className="space-y-3 max-w-md">
-                <input type="password" placeholder="Current password" value={pwForm.current} onChange={(e) => setPwForm({ ...pwForm, current: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm" required />
-                <input type="password" placeholder="New password (min 6)" value={pwForm.next} onChange={(e) => setPwForm({ ...pwForm, next: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm" required minLength={6} />
-                <input type="password" placeholder="Confirm new password" value={pwForm.confirm} onChange={(e) => setPwForm({ ...pwForm, confirm: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm" required />
-                <button type="submit" className="px-5 py-2 bg-green-600 text-white text-sm rounded-xl">Update password</button>
-              </form>
+          <div className="bg-white border rounded-xl p-6 shadow-sm">
+            <h2 className="font-bold text-lg mb-4">Admin account</h2>
+            <div className="border rounded-lg p-4 flex justify-between items-center mb-6">
+              <div><div className="font-medium">{user.name || 'Admin'}</div><div className="text-sm text-gray-500">{user.email} · role: admin</div></div>
+              <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">Active</span>
             </div>
+            <h3 className="font-semibold mb-3">Change password</h3>
+            <form onSubmit={changePassword} className="space-y-3 max-w-md">
+              <input type="password" placeholder="Current password" value={pwForm.current} onChange={(e) => setPwForm({ ...pwForm, current: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm" required />
+              <input type="password" placeholder="New password (min 6)" value={pwForm.next} onChange={(e) => setPwForm({ ...pwForm, next: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm" required minLength={6} />
+              <input type="password" placeholder="Confirm new password" value={pwForm.confirm} onChange={(e) => setPwForm({ ...pwForm, confirm: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm" required />
+              <button type="submit" className="px-5 py-2 bg-green-600 text-white text-sm rounded-xl">Update password</button>
+            </form>
           </div>
         )}
       </div>
