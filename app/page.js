@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import SiteChrome from './components/SiteChrome';
 
 const FACTORS = [
   { t: 'Valuable original content', d: '15–30+ articles with real depth — not thin or scraped pages.' },
@@ -14,9 +15,9 @@ const FACTORS = [
 
 const FAQS = [
   { q: 'Does a high score guarantee approval?', a: 'No. Google human review still decides. A high score means public checks and sampled content look healthy.' },
-  { q: 'How do you judge content quality?', a: 'We sample the homepage and internal post links, score word count, headings, spam density, outbound links, and policy-risk keywords (e.g. nulled, crack, adult).' },
+  { q: 'Free vs Pro?', a: 'Free samples fewer posts. Pro (and logged-in admin) samples up to 10 posts in parallel within Vercel Hobby time limits for deeper quality analysis.' },
+  { q: 'What about nulled sites?', a: 'We flag piracy/nulled/crack language. Those categories are typically rejected under AdSense policies.' },
   { q: 'Can this tool see private pages?', a: 'No. Only public URLs.' },
-  { q: 'What about nulled sites?', a: 'We flag piracy/nulled/crack language. Those categories are typically rejected or banned under AdSense policies.' },
 ];
 
 function ratingColor(r) {
@@ -56,6 +57,7 @@ export default function HomePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url }),
+        credentials: 'include',
       });
       const data = await res.json();
       if (!data.success) setError(data.error || 'Audit failed');
@@ -68,24 +70,8 @@ export default function HomePage() {
   }
 
   return (
-    <div>
-      {ads.header ? <div dangerouslySetInnerHTML={{ __html: ads.header }} /> : null}
-      <header className="bg-white border-b sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-lg bg-green-600 text-white font-bold flex items-center justify-center">A</div>
-            <span className="font-bold text-xl tracking-tight">AdSense<span className="text-green-600">Audit</span> Pro</span>
-          </Link>
-          <nav className="flex items-center gap-4 text-sm font-medium text-gray-600">
-            <a href="#how" className="hover:text-green-600 hidden sm:inline">How it works</a>
-            <a href="#faq" className="hover:text-green-600 hidden sm:inline">FAQ</a>
-            <Link href="/blog" className="hover:text-green-600">Blog</Link>
-            <Link href="/admin" className="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200">Admin</Link>
-          </nav>
-        </div>
-      </header>
-
-      <section className="bg-gradient-to-b from-green-50 to-white pt-14 pb-16">
+    <SiteChrome ads={ads}>
+      <section className="bg-gradient-to-b from-green-50 via-white to-white pt-14 pb-16">
         <div className="max-w-4xl mx-auto px-4 text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-semibold mb-6">
             <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
@@ -97,7 +83,7 @@ export default function HomePage() {
             <span className="text-green-600">{s.heroHighlight || 'Google AdSense?'}</span>
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-8">
-            {s.heroSubtitle || 'Live crawl of legal pages plus content quality scoring and policy-risk detection (including nulled / thin / spammy posts).'}
+            {s.heroSubtitle || 'Live crawl of legal pages plus content quality scoring and policy-risk detection.'}
           </p>
           <form onSubmit={runAudit} className="bg-white rounded-2xl shadow-xl border border-gray-100 p-2 sm:p-3 max-w-2xl mx-auto flex flex-col sm:flex-row gap-2">
             <input type="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://yourwebsite.com" required
@@ -106,7 +92,10 @@ export default function HomePage() {
               {loading ? 'Crawling pages…' : (s.auditButton || 'Run Live Audit')}
             </button>
           </form>
-          <p className="text-xs text-gray-400 mt-3">Samples homepage + internal posts · Public pages only</p>
+          <p className="text-xs text-gray-400 mt-3">
+            Free: fewer posts · Pro / admin login: up to 10 posts in parallel ·{' '}
+            <Link href="/pricing" className="text-green-700 underline">See pricing</Link>
+          </p>
           {error && <p className="mt-4 text-red-600 text-sm font-medium">{error}</p>}
         </div>
       </section>
@@ -115,6 +104,13 @@ export default function HomePage() {
 
       {result && (
         <section className="max-w-5xl mx-auto px-4 py-12 space-y-8">
+          <div className="flex flex-wrap gap-2 justify-center md:justify-start">
+            {result.planUsed && (
+              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${result.planUsed === 'pro' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'}`}>
+                {result.planUsed === 'pro' ? 'Pro analysis' : 'Free analysis'} · max {result.maxSamples} posts
+              </span>
+            )}
+          </div>
           <div className="bg-white rounded-2xl shadow-lg border p-6 sm:p-8">
             <div className="flex flex-col md:flex-row items-center gap-8">
               <div className="relative w-40 h-40 flex-shrink-0">
@@ -131,9 +127,7 @@ export default function HomePage() {
                   <div className="px-4 py-2 rounded-lg bg-green-50 border border-green-100"><div className="text-xs text-green-600 font-medium">Approval chance</div><div className="text-xl font-bold text-green-700">{result.approvalChance}%</div></div>
                   <div className="px-4 py-2 rounded-lg bg-red-50 border border-red-100"><div className="text-xs text-red-600 font-medium">Rejection risk</div><div className="text-xl font-bold text-red-700">{result.rejectionRisk}%</div></div>
                   <div className="px-4 py-2 rounded-lg bg-amber-50 border border-amber-100"><div className="text-xs text-amber-600 font-medium">Critical gaps</div><div className="text-xl font-bold text-amber-700">{result.criticalIssues}</div></div>
-                  {ca && (
-                    <div className="px-4 py-2 rounded-lg bg-blue-50 border border-blue-100"><div className="text-xs text-blue-600 font-medium">Avg content quality</div><div className="text-xl font-bold text-blue-700">{ca.averageQuality}/100</div></div>
-                  )}
+                  {ca && <div className="px-4 py-2 rounded-lg bg-blue-50 border border-blue-100"><div className="text-xs text-blue-600 font-medium">Avg content quality</div><div className="text-xl font-bold text-blue-700">{ca.averageQuality}/100</div></div>}
                 </div>
               </div>
             </div>
@@ -163,36 +157,29 @@ export default function HomePage() {
                     {(ca.pages || []).map((p) => (
                       <tr key={p.url} className="border-b border-gray-100 align-top">
                         <td className="py-3 pr-3">
-                          <div className="font-medium text-gray-900 line-clamp-1">{p.title || p.url}</div>
+                          <div className="font-medium line-clamp-1">{p.title || p.url}</div>
                           <a href={p.url} target="_blank" rel="noreferrer" className="text-xs text-green-700 break-all">{p.url}</a>
                         </td>
                         <td className="py-3 pr-3">{p.wordCount}</td>
-                        <td className="py-3 pr-3">
-                          <span className={`text-xs font-semibold px-2 py-0.5 rounded ${ratingColor(p.qualityRating)}`}>
-                            {p.qualityRating} ({p.qualityScore})
-                          </span>
-                        </td>
-                        <td className="py-3 pr-3">
-                          <span className={`text-xs font-semibold px-2 py-0.5 rounded ${ratingColor(p.adsenseFit)}`}>{p.adsenseFit}</span>
-                        </td>
-                        <td className="py-3 text-gray-600">
-                          {p.contentType}
-                          {p.riskCategories?.length ? (
-                            <span className="block text-xs text-red-600 mt-1">Risk: {p.riskCategories.join(', ')}</span>
-                          ) : null}
-                        </td>
+                        <td className="py-3 pr-3"><span className={`text-xs font-semibold px-2 py-0.5 rounded ${ratingColor(p.qualityRating)}`}>{p.qualityRating} ({p.qualityScore})</span></td>
+                        <td className="py-3 pr-3"><span className={`text-xs font-semibold px-2 py-0.5 rounded ${ratingColor(p.adsenseFit)}`}>{p.adsenseFit}</span></td>
+                        <td className="py-3 text-gray-600">{p.contentType}{p.riskCategories?.length ? <span className="block text-xs text-red-600 mt-1">Risk: {p.riskCategories.join(', ')}</span> : null}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
+              {result.planUsed === 'free' && (
+                <p className="mt-4 text-sm text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-4 py-3">
+                  Free plan samples fewer posts. <Link href="/pricing" className="font-semibold underline">Upgrade to Pro</Link> or log in as admin for up to 10 sampled posts.
+                </p>
+              )}
             </div>
           )}
 
           <div className="bg-white rounded-2xl shadow-lg border p-6 sm:p-8">
             <h3 className="text-xl font-bold mb-2">Detailed live checks</h3>
-            <p className="text-sm text-gray-500 mb-6">Passed items were verified live. Failed items need action.</p>
-            <div className="space-y-5">
+            <div className="space-y-5 mt-6">
               {(result.checks || []).map((c) => (
                 <div key={c.id} className="border rounded-xl overflow-hidden">
                   <div className="bg-gray-50 px-5 py-3 flex flex-wrap items-center justify-between gap-2">
@@ -207,7 +194,6 @@ export default function HomePage() {
                     {!c.pass && c.fix && <p><span className="font-medium">Fix: </span>{c.fix}</p>}
                     {!c.pass && c.sampleText && (
                       <div>
-                        <div className="text-xs font-semibold text-gray-500 uppercase mb-1">Sample text</div>
                         <pre className="bg-gray-900 text-gray-100 rounded-lg p-4 prose-sample max-h-40 overflow-auto">{c.sampleText}</pre>
                         <button type="button" className="mt-2 text-xs px-3 py-1.5 bg-green-600 text-white rounded-lg" onClick={() => navigator.clipboard.writeText(c.sampleText)}>Copy sample</button>
                       </div>
@@ -223,13 +209,9 @@ export default function HomePage() {
       <section id="how" className="py-20 bg-white border-t">
         <div className="max-w-5xl mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-3">{s.howTitle || 'How the live audit works'}</h2>
-          <p className="text-gray-600 text-center max-w-2xl mx-auto mb-12">{s.howSubtitle || 'We crawl your homepage, legal pages, and sample posts for quality and policy risk.'}</p>
+          <p className="text-gray-600 text-center max-w-2xl mx-auto mb-12">{s.howSubtitle || 'We crawl your homepage, legal pages, and sample posts.'}</p>
           <div className="grid md:grid-cols-3 gap-8 text-center">
-            {[
-              ['1', 'Enter URL', 'Any public site'],
-              ['2', 'Crawl + sample posts', 'Legal pages + article links'],
-              ['3', 'Score quality and risk', 'Thin, spam, nulled, adult, etc.'],
-            ].map(([n, t, d]) => (
+            {[['1', 'Enter URL', 'Any public site'], ['2', 'Crawl + sample posts', 'Legal pages + articles'], ['3', 'Score quality and risk', 'Thin, spam, nulled, adult']].map(([n, t, d]) => (
               <div key={n}>
                 <div className="w-14 h-14 rounded-2xl bg-green-100 text-green-700 flex items-center justify-center text-2xl font-bold mx-auto mb-4">{n}</div>
                 <h3 className="font-semibold mb-2">{t}</h3>
@@ -240,16 +222,19 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="py-20 bg-gray-50">
+      <section id="features" className="py-20 bg-gray-50">
         <div className="max-w-5xl mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-3">{s.checklistTitle || 'What Google reviewers look for'}</h2>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-12">
             {FACTORS.map((f) => (
-              <div key={f.t} className="bg-white rounded-xl border p-5 shadow-sm">
+              <div key={f.t} className="bg-white rounded-xl border p-5 shadow-sm hover:shadow-md transition">
                 <h3 className="font-semibold mb-2">{f.t}</h3>
                 <p className="text-sm text-gray-600">{f.d}</p>
               </div>
             ))}
+          </div>
+          <div className="text-center mt-10">
+            <Link href="/pricing" className="inline-flex px-6 py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700">Compare Free vs Pro</Link>
           </div>
         </div>
       </section>
@@ -267,16 +252,6 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-
-      <footer className="bg-gray-900 text-gray-400 py-12 text-center text-sm">
-        {ads.footer ? <div className="max-w-4xl mx-auto px-4 mb-6" dangerouslySetInnerHTML={{ __html: ads.footer }} /> : null}
-        <div className="font-bold text-white mb-2">{s.siteName || 'AdSenseAudit Pro'}</div>
-        <p>{s.footerNote || 'Independent readiness tool. Not affiliated with Google.'}</p>
-        <div className="mt-3 flex justify-center gap-4">
-          <Link href="/blog" className="hover:text-white">Blog</Link>
-          <Link href="/admin" className="hover:text-white">Admin</Link>
-        </div>
-      </footer>
-    </div>
+    </SiteChrome>
   );
 }
