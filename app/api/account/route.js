@@ -17,7 +17,7 @@ function publicUser(u) {
 export async function GET(request) {
   const session = await requireUser(request);
   if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 });
-  const user = getUserById(session.sub);
+  const user = await getUserById(session.sub);
   if (!user) return Response.json({ error: 'User not found' }, { status: 404 });
   return Response.json({ user: publicUser(user) });
 }
@@ -30,7 +30,7 @@ export async function PUT(request) {
     const body = await request.json();
 
     if (body.action === 'password') {
-      const result = updateUserPassword(session.sub, body.currentPassword, body.newPassword);
+      const result = await updateUserPassword(session.sub, body.currentPassword, body.newPassword);
       if (!result.ok) return Response.json({ error: result.error }, { status: 400 });
       return Response.json({ ok: true, message: 'Password updated' });
     }
@@ -43,11 +43,10 @@ export async function PUT(request) {
       patch.email = e;
     }
 
-    const user = updateUser(session.sub, patch);
+    const user = await updateUser(session.sub, patch);
     if (!user) return Response.json({ error: 'User not found' }, { status: 404 });
 
-    // Refresh session cookie if email changed
-    const full = getUserById(session.sub);
+    const full = await getUserById(session.sub);
     const token = await createToken(full);
     return new Response(JSON.stringify({ ok: true, user: publicUser(full) }), {
       status: 200,
