@@ -2,9 +2,8 @@
 
 import { useEffect, useRef, useId } from 'react';
 
-/**
- * TinyMCE loaded from CDN — toolbar similar to a basic WordPress editor.
- */
+const TINYMCE_BASE = 'https://cdn.jsdelivr.net/npm/tinymce@6.8.3';
+
 export default function RichEditor({ value = '', onChange, height = 420 }) {
   const id = useId().replace(/:/g, '');
   const textareaId = `rich-editor-${id}`;
@@ -20,21 +19,21 @@ export default function RichEditor({ value = '', onChange, height = 420 }) {
       window.tinymce.remove(`#${textareaId}`);
       window.tinymce.init({
         selector: `#${textareaId}`,
+        base_url: TINYMCE_BASE,
+        suffix: '.min',
         height,
         menubar: 'file edit view insert format tools table',
         plugins:
           'advlist autolink lists link image charmap preview anchor searchreplace visualblocks code fullscreen insertdatetime media table help wordcount',
         toolbar:
-          'undo redo | blocks | bold italic underline strikethrough | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image media | removeformat | code fullscreen',
-        content_style: 'body { font-family: Inter, system-ui, sans-serif; font-size: 16px; line-height: 1.6; }',
+          'undo redo | blocks | bold italic underline strikethrough | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image media table | removeformat | code fullscreen',
+        content_style: 'body { font-family: Inter, system-ui, sans-serif; font-size: 16px; line-height: 1.7; padding: 12px; }',
         branding: false,
         promotion: false,
         convert_urls: false,
         setup(editor) {
           editorRef.current = editor;
-          editor.on('init', () => {
-            editor.setContent(value || '');
-          });
+          editor.on('init', () => editor.setContent(value || ''));
           editor.on('change keyup setcontent', () => {
             onChangeRef.current?.(editor.getContent());
           });
@@ -50,8 +49,7 @@ export default function RichEditor({ value = '', onChange, height = 420 }) {
         existing.addEventListener('load', init);
       } else {
         const script = document.createElement('script');
-        script.src = 'https://cdn.tiny.cloud/1/no-api-key/tinymce/6/tinymce.min.js';
-        script.referrerPolicy = 'origin';
+        script.src = `${TINYMCE_BASE}/tinymce.min.js`;
         script.setAttribute('data-tinymce', '1');
         script.onload = init;
         document.head.appendChild(script);
@@ -69,7 +67,6 @@ export default function RichEditor({ value = '', onChange, height = 420 }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [textareaId, height]);
 
-  // Keep external value in sync when opening a different post
   useEffect(() => {
     const ed = editorRef.current;
     if (ed && value !== undefined) {
@@ -79,7 +76,7 @@ export default function RichEditor({ value = '', onChange, height = 420 }) {
   }, [value]);
 
   return (
-    <div className="border rounded-lg overflow-hidden bg-white">
+    <div className="border rounded-lg overflow-hidden bg-white min-h-[200px]">
       <textarea id={textareaId} defaultValue={value} />
     </div>
   );
