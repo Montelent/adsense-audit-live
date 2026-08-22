@@ -12,13 +12,13 @@ export async function POST(request) {
       return Response.json({ error: 'Password must be at least 6 characters' }, { status: 400 });
     }
 
-    const user = findUserByEmail(email);
+    const user = await findUserByEmail(email);
     if (!user) return Response.json({ error: 'Invalid reset link' }, { status: 400 });
 
-    const ok = consumePasswordResetToken(user.id, token);
+    const ok = await consumePasswordResetToken(user.id, token);
     if (!ok) return Response.json({ error: 'Reset link expired or invalid' }, { status: 400 });
 
-    updateUser(user.id, { password });
+    await updateUser(user.id, { password });
     return Response.json({ ok: true, message: 'Password updated. You can log in now.' });
   } catch (err) {
     return Response.json({ error: err.message }, { status: 500 });
