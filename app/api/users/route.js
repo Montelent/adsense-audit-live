@@ -6,7 +6,7 @@ import {
   updatePaymentRequest,
   addPaymentRequest,
   createUser,
-  getUserById,
+  hasDatabase,
 } from '../../../lib/store.js';
 import { requireAdmin, requireUser } from '../../../lib/auth.js';
 
@@ -15,9 +15,10 @@ export async function GET(request) {
   if (!admin) return Response.json({ error: 'Unauthorized' }, { status: 401 });
   const { searchParams } = new URL(request.url);
   if (searchParams.get('payments') === '1') {
-    return Response.json({ payments: listPaymentRequests() });
+    return Response.json({ payments: await listPaymentRequests() });
   }
-  return Response.json({ users: listUsers() });
+  const users = await listUsers();
+  return Response.json({ users, database: hasDatabase() });
 }
 
 export async function POST(request) {
@@ -26,7 +27,7 @@ export async function POST(request) {
   try {
     const body = await request.json();
     if (body.action === 'payment_request') {
-      const item = addPaymentRequest({
+      const item = await addPaymentRequest({
         userId: session.sub,
         email: session.email,
         method: body.method || 'other',
@@ -49,31 +50,30 @@ export async function PUT(request) {
 
     if (body.action === 'password') {
       const userId = body.userId || admin.sub || 'admin-1';
-      // Admin can force-set password without current if force: true
       if (body.force && body.newPassword) {
-        const user = updateUser(userId, { password: body.newPassword });
+        const user = await updateUser(userId, { password: body.newPassword });
         if (!user) return Response.json({ error: 'User not found' }, { status: 404 });
         return Response.json({ ok: true, message: 'Password set' });
       }
-      const result = updateUserPassword(userId, body.currentPassword, body.newPassword);
+      const result = await updateUserPassword(userId, body.currentPassword, body.newPassword);
       if (!result.ok) return Response.json({ error: result.error }, { status: 400 });
       return Response.json({ ok: true, message: 'Password updated' });
     }
 
     if (body.action === 'set_plan' && body.userId) {
-      const user = updateUser(body.userId, { plan: body.plan });
+      const user = await updateUser(body.userId, { plan: body.plan });
       if (!user) return Response.json({ error: 'User not found' }, { status: 404 });
       return Response.json({ ok: true, user });
     }
 
     if (body.action === 'add_credits' && body.userId) {
-      const user = updateUser(body.userId, { addCredits: Number(body.credits) || 0 });
+      const user = await updateUser(body.userId, { addCredits: Number(body.credits) || 0 });
       if (!user) return Response.json({ error: 'User not found' }, { status: 404 });
       return Response.json({ ok: true, user });
     }
 
     if (body.action === 'create_user') {
-      const user = createUser({
+      const user = await createUser({
         email: body.email,
         name: body.name,
         password: body.password || 'changeme123',
@@ -86,10 +86,10 @@ export async function PUT(request) {
     }
 
     if (body.action === 'payment_status' && body.requestId) {
-      const item = updatePaymentRequest(body.requestId, { status: body.status });
+      const item = await updatePaymentRequest(body.requestId, { status: body.status });
       if (!item) return Response.json({ error: 'Not found' }, { status: 404 });
       if (body.status === 'approved' && item.userId) {
-        updateUser(item.userId, { plan: 'pro' });
+        await updateUser(item.userId, { plan: 'pro' });
       }
       return Response.json({ ok: true, request: item });
     }
@@ -102,19 +102,20 @@ export async function PUT(request) {
       if (body.plan === 'free' || body.plan === 'pro') patch.plan = body.plan;
       if (typeof body.credits === 'number') patch.credits = body.credits;
       if (body.password && body.password.length >= 6) patch.password = body.password;
-      const user = updateUser(body.userId, patch);
+      const user = await updateUser(body.userId, patch);
       if (!user) return Response.json({ error: 'User not found' }, { status: 404 });
       return Response.json({ ok: true, user });
     }
 
     if (body.userId) {
-      const user = updateUser(body.userId, body);
+      const user = await updateUser(body.userId, body);
       if (!user) return Response.json({ error: 'User not found' }, { status: 404 });
       return Response.json({ ok: true, user });
     }
 
     return Response.json({ error: 'Invalid request' }, { status: 400 });
   } catch (err) {
+    console.error(err);
     return Response.json({ error: err.message }, { status: 500 });
   }
 }
