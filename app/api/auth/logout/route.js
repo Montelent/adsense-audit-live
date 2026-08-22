@@ -1,4 +1,4 @@
-const { COOKIE } = require('../../../../lib/auth');
+import { COOKIE } from '../../../../lib/auth.js';
 
 export async function POST() {
   const res = Response.json({ ok: true });
