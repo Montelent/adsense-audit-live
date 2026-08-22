@@ -1,12 +1,12 @@
-const {
+import {
   getSettings,
   updateSettings,
   getAds,
   updateAds,
   getScripts,
   updateScripts,
-} = require('../../../lib/store');
-const { requireAdmin } = require('../../../lib/auth');
+} from '../../../lib/store.js';
+import { requireAdmin } from '../../../lib/auth.js';
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
