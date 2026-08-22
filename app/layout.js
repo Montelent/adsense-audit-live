@@ -1,3 +1,5 @@
+import SiteScripts from './components/SiteScripts';
+
 export const metadata = {
   title: 'AdSense Audit Pro – Live Website Readiness Checker',
   description:
@@ -24,7 +26,10 @@ export default function RootLayout({ children }) {
           }}
         />
       </head>
-      <body className="bg-gray-50 text-gray-900 antialiased">{children}</body>
+      <body className="bg-gray-50 text-gray-900 antialiased">
+        <SiteScripts />
+        {children}
+      </body>
     </html>
   );
 }
