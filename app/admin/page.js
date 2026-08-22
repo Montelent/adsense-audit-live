@@ -289,11 +289,11 @@ export default function AdminPage() {
 
         {tab === 'scripts' && (
           <form onSubmit={saveScripts} className="bg-white border rounded-xl p-6 space-y-4 shadow-sm">
-            <h2 className="font-bold text-lg">Analytics, verification & head scripts</h2>
+            <h2 className="font-bold text-lg">Analytics, verification and head scripts</h2>
             <p className="text-sm text-gray-500">Google Analytics, Search Console verification meta, Tag Manager, custom head tags, etc.</p>
             <div>
-              <label className="text-sm font-medium">Head scripts / meta (inside <head>)</label>
-              <textarea name="head" defaultValue={scripts.head || ''} rows={5} className="w-full border rounded-lg px-3 py-2 text-sm font-mono mt-1" placeholder={'<meta name="google-site-verification" content="..." />\n<script async src="https://www.googletagmanager.com/gtag/js?id=G-..."></script>'} />
+              <label className="text-sm font-medium">Head scripts / meta (document head)</label>
+              <textarea name="head" defaultValue={scripts.head || ''} rows={5} className="w-full border rounded-lg px-3 py-2 text-sm font-mono mt-1" placeholder={'Meta verification tags and analytics scripts'} />
             </div>
             <div>
               <label className="text-sm font-medium">Body start</label>
