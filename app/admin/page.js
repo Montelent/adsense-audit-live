@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import RichEditor from '../components/RichEditor';
 import PaymentSettings from './PaymentSettings';
+import EmailSettings from './EmailSettings';
+import UsersPanel from './UsersPanel';
 
 const TABS = [
   ['dashboard', 'Dashboard'],
@@ -13,6 +15,7 @@ const TABS = [
   ['scripts', 'Scripts'],
   ['plans', 'Plans'],
   ['payments', 'Payments'],
+  ['email', 'Email'],
   ['users', 'Users'],
 ];
 
@@ -43,6 +46,7 @@ export default function AdminPage() {
   const [scripts, setScripts] = useState({});
   const [plan, setPlan] = useState({});
   const [payments, setPayments] = useState({});
+  const [mail, setMail] = useState({});
   const [users, setUsers] = useState([]);
   const [payReqs, setPayReqs] = useState([]);
   const [pwForm, setPwForm] = useState({ current: '', next: '', confirm: '' });
@@ -67,6 +71,7 @@ export default function AdminPage() {
     setScripts(s.scripts || {});
     setPlan(s.plan || {});
     setPayments(s.payments || {});
+    setMail(s.mail || {});
     const u = await fetch('/api/users').then((r) => r.json());
     setUsers(u.users || []);
     const pr = await fetch('/api/users?payments=1').then((r) => r.json());
@@ -164,8 +169,8 @@ export default function AdminPage() {
       proPrice: form.proPrice.value,
       proCurrency: form.proCurrency.value,
       proInterval: form.proInterval.value,
-      freeMaxSamples: Number(form.freeMaxSamples.value) || 3,
-      proMaxSamples: Number(form.proMaxSamples.value) || 10,
+      freeMaxSamples: Number(form.freeMaxSamples.value) || 20,
+      proMaxSamples: Number(form.proMaxSamples.value) || 200,
       freeFeatures: form.freeFeatures.value.split('\n').map((x) => x.trim()).filter(Boolean),
       proFeatures: form.proFeatures.value.split('\n').map((x) => x.trim()).filter(Boolean),
       freeEnabled: form.freeEnabled.checked,
@@ -174,26 +179,6 @@ export default function AdminPage() {
     await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ plan: next }) });
     setPlan(next);
     flash('Plans saved');
-  }
-
-  async function setUserPlan(userId, newPlan) {
-    await fetch('/api/users', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'set_plan', userId, plan: newPlan }),
-    });
-    flash(`User set to ${newPlan}`);
-    loadAll();
-  }
-
-  async function resolvePay(requestId, status) {
-    await fetch('/api/users', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'payment_status', requestId, status }),
-    });
-    flash(status === 'approved' ? 'Payment approved — user is Pro' : 'Payment rejected');
-    loadAll();
   }
 
   async function changePassword(e) {
@@ -347,8 +332,8 @@ export default function AdminPage() {
               <div><label className="text-xs text-gray-500">Pro price</label><input name="proPrice" defaultValue={plan.proPrice || '29'} className="w-full border rounded-lg px-3 py-2 text-sm" /></div>
               <div><label className="text-xs text-gray-500">Currency</label><input name="proCurrency" defaultValue={plan.proCurrency || 'USD'} className="w-full border rounded-lg px-3 py-2 text-sm" /></div>
               <div><label className="text-xs text-gray-500">Interval</label><input name="proInterval" defaultValue={plan.proInterval || 'month'} className="w-full border rounded-lg px-3 py-2 text-sm" /></div>
-              <div><label className="text-xs text-gray-500">Free max posts</label><input name="freeMaxSamples" type="number" defaultValue={plan.freeMaxSamples || 3} className="w-full border rounded-lg px-3 py-2 text-sm" /></div>
-              <div><label className="text-xs text-gray-500">Pro max posts (max 10 Hobby)</label><input name="proMaxSamples" type="number" defaultValue={plan.proMaxSamples || 10} className="w-full border rounded-lg px-3 py-2 text-sm" /></div>
+              <div><label className="text-xs text-gray-500">Free max posts</label><input name="freeMaxSamples" type="number" defaultValue={plan.freeMaxSamples || 20} className="w-full border rounded-lg px-3 py-2 text-sm" /></div>
+              <div><label className="text-xs text-gray-500">Pro max posts</label><input name="proMaxSamples" type="number" defaultValue={plan.proMaxSamples || 200} className="w-full border rounded-lg px-3 py-2 text-sm" /></div>
             </div>
             <div><label className="text-xs text-gray-500">Free features (one per line)</label><textarea name="freeFeatures" defaultValue={(plan.freeFeatures || []).join('\n')} rows={4} className="w-full border rounded-lg px-3 py-2 text-sm" /></div>
             <div><label className="text-xs text-gray-500">Pro features (one per line)</label><textarea name="proFeatures" defaultValue={(plan.proFeatures || []).join('\n')} rows={5} className="w-full border rounded-lg px-3 py-2 text-sm" /></div>
@@ -358,6 +343,10 @@ export default function AdminPage() {
 
         {tab === 'payments' && (
           <PaymentSettings payments={payments} onSaved={setPayments} flash={flash} />
+        )}
+
+        {tab === 'email' && (
+          <EmailSettings mail={mail} onSaved={setMail} flash={flash} />
         )}
 
         {tab === 'blogs' && (
@@ -396,48 +385,9 @@ export default function AdminPage() {
 
         {tab === 'users' && (
           <div className="space-y-6">
+            <UsersPanel users={users} payReqs={payReqs} onRefresh={loadAll} flash={flash} />
             <div className="bg-white border rounded-xl p-6">
-              <h2 className="font-bold text-lg mb-4">Registered users</h2>
-              <div className="space-y-3">
-                {users.map((u) => (
-                  <div key={u.id} className="border rounded-lg p-4 flex flex-wrap justify-between gap-3 items-center">
-                    <div>
-                      <div className="font-medium">{u.name || u.email}</div>
-                      <div className="text-xs text-gray-500">{u.email} · {u.role} · plan: <strong>{u.plan || 'free'}</strong></div>
-                    </div>
-                    <div className="flex gap-2">
-                      <button onClick={() => setUserPlan(u.id, 'pro')} className="text-xs px-3 py-1.5 rounded-lg bg-green-600 text-white">Set Pro</button>
-                      <button onClick={() => setUserPlan(u.id, 'free')} className="text-xs px-3 py-1.5 rounded-lg bg-gray-100">Set Free</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="bg-white border rounded-xl p-6">
-              <h2 className="font-bold text-lg mb-4">Payment activation requests</h2>
-              {payReqs.length === 0 && <p className="text-sm text-gray-500">No requests yet</p>}
-              <div className="space-y-3">
-                {payReqs.map((p) => (
-                  <div key={p.id} className="border rounded-lg p-4 flex flex-wrap justify-between gap-3">
-                    <div className="text-sm">
-                      <div className="font-medium">{p.email}</div>
-                      <div className="text-gray-500">{p.method} · {p.status}</div>
-                      {p.note && <div className="text-xs mt-1">{p.note}</div>}
-                    </div>
-                    {p.status === 'pending' && (
-                      <div className="flex gap-2">
-                        <button onClick={() => resolvePay(p.id, 'approved')} className="text-xs px-3 py-1.5 rounded-lg bg-green-600 text-white">Approve → Pro</button>
-                        <button onClick={() => resolvePay(p.id, 'rejected')} className="text-xs px-3 py-1.5 rounded-lg bg-red-50 text-red-600">Reject</button>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="bg-white border rounded-xl p-6">
-              <h3 className="font-semibold mb-3">Change admin password</h3>
+              <h3 className="font-semibold mb-3">Change your admin password</h3>
               <form onSubmit={changePassword} className="space-y-3 max-w-md">
                 <input type="password" placeholder="Current" value={pwForm.current} onChange={(e) => setPwForm({ ...pwForm, current: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm" required />
                 <input type="password" placeholder="New (min 6)" value={pwForm.next} onChange={(e) => setPwForm({ ...pwForm, next: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-sm" required minLength={6} />
