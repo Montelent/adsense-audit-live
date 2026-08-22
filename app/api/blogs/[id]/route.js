@@ -1,5 +1,5 @@
-const { getBlogById, updateBlog, deleteBlog } = require('../../../../lib/store');
-const { requireAdmin } = require('../../../../lib/auth');
+import { getBlogById, updateBlog, deleteBlog } from '../../../../lib/store.js';
+import { requireAdmin } from '../../../../lib/auth.js';
 
 export async function GET(request, { params }) {
   const blog = getBlogById(params.id);
