@@ -5,12 +5,11 @@ import Link from 'next/link';
 
 export default function BlogIndex() {
   const [blogs, setBlogs] = useState([]);
+  const [ad, setAd] = useState('');
 
   useEffect(() => {
-    fetch('/api/blogs')
-      .then((r) => r.json())
-      .then((d) => setBlogs(d.blogs || []))
-      .catch(() => {});
+    fetch('/api/blogs').then((r) => r.json()).then((d) => setBlogs(d.blogs || [])).catch(() => {});
+    fetch('/api/settings?type=ads').then((r) => r.json()).then((d) => setAd(d.ads?.blog || '')).catch(() => {});
   }, []);
 
   return (
@@ -30,7 +29,8 @@ export default function BlogIndex() {
       </header>
       <main className="max-w-3xl mx-auto px-4 py-12">
         <h1 className="text-3xl font-bold mb-2">Blog</h1>
-        <p className="text-gray-600 mb-10">Guides for AdSense readiness.</p>
+        <p className="text-gray-600 mb-8">Guides for AdSense readiness.</p>
+        {ad ? <div className="mb-8" dangerouslySetInnerHTML={{ __html: ad }} /> : null}
         <div className="space-y-6">
           {blogs.map((b) => (
             <Link key={b.id} href={`/blog/${b.slug}`} className="block bg-white border rounded-xl p-6 hover:shadow-md transition">
