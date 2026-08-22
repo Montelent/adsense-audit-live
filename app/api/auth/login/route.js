@@ -1,4 +1,4 @@
-import { login, createToken, sessionCookie } from '../../../../lib/auth.js';
+import { login, createToken, jsonWithSession } from '../../../../lib/auth.js';
 
 export async function POST(request) {
   try {
@@ -13,13 +13,21 @@ export async function POST(request) {
       return Response.json({ error: 'Invalid email or password' }, { status: 401 });
     }
     const token = await createToken(user);
-    const res = Response.json({
-      ok: true,
-      user: { id: user.id, email: user.email, name: user.name, role: user.role, plan: user.plan },
-    });
-    res.headers.set('Set-Cookie', sessionCookie(token));
-    return res;
+    return jsonWithSession(
+      {
+        ok: true,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          plan: user.plan,
+        },
+      },
+      token
+    );
   } catch (err) {
+    console.error('login error', err);
     return Response.json({ error: err.message }, { status: 500 });
   }
 }
