@@ -8,16 +8,14 @@ export async function POST(request) {
     const email = (body.email || '').trim().toLowerCase();
     if (!email) return Response.json({ error: 'Email required' }, { status: 400 });
 
-    // Always return ok to avoid email enumeration
-    const user = findUserByEmail(email);
+    const user = await findUserByEmail(email);
     if (user) {
       const token = crypto.randomBytes(32).toString('hex');
-      setPasswordResetToken(user.id, token, Date.now() + 60 * 60 * 1000);
+      await setPasswordResetToken(user.id, token, Date.now() + 60 * 60 * 1000);
       const origin = request.headers.get('origin') || process.env.NEXT_PUBLIC_SITE_URL || '';
       const resetUrl = `${origin}/reset-password?token=${token}&email=${encodeURIComponent(email)}`;
       const mail = await sendPasswordResetEmail(email, resetUrl);
       if (!mail.ok) {
-        // Still ok for user message, but log
         console.error('Reset mail failed:', mail.error);
         return Response.json({
           ok: true,
