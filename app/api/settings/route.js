@@ -10,6 +10,8 @@ import {
   getPayments,
   getPublicPayments,
   updatePayments,
+  getMailSettings,
+  updateMailSettings,
 } from '../../../lib/store.js';
 import { requireAdmin } from '../../../lib/auth.js';
 import { METHOD_DEFS } from '../../../lib/payments.js';
@@ -20,6 +22,11 @@ export async function GET(request) {
   if (type === 'ads') return Response.json({ ads: getAds() });
   if (type === 'scripts') return Response.json({ scripts: getScripts() });
   if (type === 'plan') return Response.json({ plan: getPlan() });
+  if (type === 'mail') {
+    const admin = await requireAdmin(request);
+    if (!admin) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    return Response.json({ mail: getMailSettings() });
+  }
   if (type === 'payments') {
     const admin = await requireAdmin(request);
     if (admin) return Response.json({ payments: getPayments(), methodDefs: METHOD_DEFS });
@@ -34,6 +41,7 @@ export async function GET(request) {
       plan: getPlan(),
       payments: admin ? getPayments() : getPublicPayments(),
       methodDefs: admin ? METHOD_DEFS : undefined,
+      mail: admin ? getMailSettings() : undefined,
     });
   }
   return Response.json({ settings: getSettings() });
@@ -49,6 +57,7 @@ export async function PUT(request) {
     if (body.scripts) updateScripts(body.scripts);
     if (body.plan) updatePlan(body.plan);
     if (body.payments) updatePayments(body.payments);
+    if (body.mail) updateMailSettings(body.mail);
     return Response.json({
       ok: true,
       settings: getSettings(),
@@ -56,6 +65,7 @@ export async function PUT(request) {
       scripts: getScripts(),
       plan: getPlan(),
       payments: getPayments(),
+      mail: getMailSettings(),
     });
   } catch (err) {
     return Response.json({ error: err.message }, { status: 500 });
