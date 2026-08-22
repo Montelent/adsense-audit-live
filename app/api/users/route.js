@@ -1,5 +1,5 @@
-const { listUsers, updateUserPassword, updateUser, getStore } = require('../../../lib/store');
-const { requireAdmin } = require('../../../lib/auth');
+import { listUsers, updateUserPassword, updateUser } from '../../../lib/store.js';
+import { requireAdmin } from '../../../lib/auth.js';
 
 export async function GET(request) {
   const admin = await requireAdmin(request);
