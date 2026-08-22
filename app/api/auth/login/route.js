@@ -1,4 +1,4 @@
-const { login, createToken, COOKIE } = require('../../../../lib/auth');
+import { login, createToken, COOKIE } from '../../../../lib/auth.js';
 
 export async function POST(request) {
   try {
