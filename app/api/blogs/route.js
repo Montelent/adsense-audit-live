@@ -7,9 +7,12 @@ export async function GET(request) {
   if (all) {
     const admin = await requireAdmin(request);
     if (!admin) return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    return Response.json({ blogs: listBlogs({ publishedOnly: false }), stats: getStats() });
+    return Response.json({
+      blogs: await listBlogs({ publishedOnly: false }),
+      stats: await getStats(),
+    });
   }
-  return Response.json({ blogs: listBlogs({ publishedOnly: true }) });
+  return Response.json({ blogs: await listBlogs({ publishedOnly: true }) });
 }
 
 export async function POST(request) {
@@ -18,7 +21,7 @@ export async function POST(request) {
   try {
     const body = await request.json();
     if (!body.title) return Response.json({ error: 'Title required' }, { status: 400 });
-    const blog = createBlog(body);
+    const blog = await createBlog(body);
     return Response.json({ blog }, { status: 201 });
   } catch (err) {
     return Response.json({ error: err.message }, { status: 500 });
