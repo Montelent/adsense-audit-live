@@ -50,6 +50,7 @@ export default function AdminPage() {
   const [users, setUsers] = useState([]);
   const [payReqs, setPayReqs] = useState([]);
   const [pwForm, setPwForm] = useState({ current: '', next: '', confirm: '' });
+  const [booting, setBooting] = useState(true);
 
   function flash(t) {
     setMsg(t);
@@ -57,32 +58,46 @@ export default function AdminPage() {
   }
 
   async function loadAll() {
-    const res = await fetch('/api/blogs?all=1');
-    if (res.status === 401) {
+    const me = await fetch('/api/auth/me', { credentials: 'same-origin' })
+      .then((r) => r.json())
+      .catch(() => ({}));
+    if (!me.user || me.user.role !== 'admin') {
       setUser(null);
       return false;
     }
-    const data = await res.json();
-    setBlogs(data.blogs || []);
-    setStats(data.stats || null);
-    const s = await fetch('/api/settings?type=all').then((r) => r.json());
-    setSettings(s.settings || {});
-    setAds(s.ads || {});
-    setScripts(s.scripts || {});
-    setPlan(s.plan || {});
-    setPayments(s.payments || {});
-    setMail(s.mail || {});
-    const u = await fetch('/api/users').then((r) => r.json());
-    setUsers(u.users || []);
-    const pr = await fetch('/api/users?payments=1').then((r) => r.json());
-    setPayReqs(pr.payments || []);
+    setUser({
+      id: me.user.id,
+      name: me.user.name || 'Admin',
+      email: me.user.email,
+      role: 'admin',
+      plan: me.user.plan || 'pro',
+    });
+    try {
+      const res = await fetch('/api/blogs?all=1', { credentials: 'same-origin' });
+      if (res.ok) {
+        const data = await res.json();
+        setBlogs(data.blogs || []);
+        setStats(data.stats || null);
+      }
+      const s = await fetch('/api/settings?type=all', { credentials: 'same-origin' }).then((r) => r.json());
+      setSettings(s.settings || {});
+      setAds(s.ads || {});
+      setScripts(s.scripts || {});
+      setPlan(s.plan || {});
+      setPayments(s.payments || {});
+      setMail(s.mail || {});
+      const u = await fetch('/api/users', { credentials: 'same-origin' }).then((r) => r.json());
+      setUsers(u.users || []);
+      const pr = await fetch('/api/users?payments=1', { credentials: 'same-origin' }).then((r) => r.json());
+      setPayReqs(pr.payments || []);
+    } catch (err) {
+      console.error('admin load', err);
+    }
     return true;
   }
 
   useEffect(() => {
-    loadAll().then((ok) => {
-      if (ok) setUser({ name: 'Admin', email: 'admin', role: 'admin' });
-    });
+    loadAll().finally(() => setBooting(false));
   }, []);
 
   function openEditor(post) {
@@ -101,6 +116,7 @@ export default function AdminPage() {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
       body: JSON.stringify({ email, password }),
     });
     const data = await res.json();
@@ -110,16 +126,20 @@ export default function AdminPage() {
     }
     if (data.user?.role !== 'admin') {
       setLoginError('Admin access only');
-      await fetch('/api/auth/logout', { method: 'POST' });
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
       return;
     }
     setUser(data.user);
     setPassword('');
-    loadAll();
+    await new Promise((r) => setTimeout(r, 80));
+    const ok = await loadAll();
+    if (!ok) {
+      setLoginError('Session cookie not accepted. Hard-refresh and try again.');
+    }
   }
 
   async function handleLogout() {
-    await fetch('/api/auth/logout', { method: 'POST' });
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
     setUser(null);
   }
 
@@ -130,7 +150,7 @@ export default function AdminPage() {
     Array.from(form.elements).forEach((el) => {
       if (el.name) next[el.name] = el.value;
     });
-    await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ settings: next }) });
+    await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ settings: next }) });
     setSettings((s) => ({ ...s, ...next }));
     flash('Homepage saved');
   }
@@ -142,7 +162,7 @@ export default function AdminPage() {
     AD_FIELDS.forEach(([k]) => {
       next[k] = form.elements[k]?.value || '';
     });
-    await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ads: next }) });
+    await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ ads: next }) });
     setAds(next);
     flash('Ad codes saved');
   }
@@ -155,7 +175,7 @@ export default function AdminPage() {
       bodyStart: form.elements.bodyStart.value,
       bodyEnd: form.elements.bodyEnd.value,
     };
-    await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ scripts: next }) });
+    await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ scripts: next }) });
     setScripts(next);
     flash('Scripts saved');
   }
@@ -176,7 +196,7 @@ export default function AdminPage() {
       freeEnabled: form.freeEnabled.checked,
       proEnabled: form.proEnabled.checked,
     };
-    await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ plan: next }) });
+    await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ plan: next }) });
     setPlan(next);
     flash('Plans saved');
   }
@@ -190,6 +210,7 @@ export default function AdminPage() {
     const res = await fetch('/api/users', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
       body: JSON.stringify({
         action: 'password',
         userId: user?.id || 'admin-1',
@@ -218,9 +239,9 @@ export default function AdminPage() {
       published: form.published.checked,
     };
     if (editor?.id) {
-      await fetch(`/api/blogs/${editor.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      await fetch(`/api/blogs/${editor.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify(payload) });
     } else {
-      await fetch('/api/blogs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      await fetch('/api/blogs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify(payload) });
     }
     setEditor(null);
     setPostContent('');
@@ -230,8 +251,14 @@ export default function AdminPage() {
 
   async function deletePost(id) {
     if (!confirm('Delete this post?')) return;
-    await fetch(`/api/blogs/${id}`, { method: 'DELETE' });
+    await fetch(`/api/blogs/${id}`, { method: 'DELETE', credentials: 'same-origin' });
     loadAll();
+  }
+
+  if (booting) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-gray-500">Loading…</div>
+    );
   }
 
   if (!user) {
