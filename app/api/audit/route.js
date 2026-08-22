@@ -1,8 +1,9 @@
-const { crawlSite } = require('../../../lib/crawler');
-const { recordAudit } = require('../../../lib/store');
+import { crawlSite } from '../../../lib/crawler.js';
+import { recordAudit } from '../../../lib/store.js';
 
 export const maxDuration = 30;
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 export async function POST(request) {
   try {
