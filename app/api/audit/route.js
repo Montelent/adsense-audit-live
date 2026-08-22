@@ -2,7 +2,8 @@ import { crawlSite } from '../../../lib/crawler.js';
 import { recordAudit, getPlan } from '../../../lib/store.js';
 import { isProSession } from '../../../lib/auth.js';
 
-export const maxDuration = 10;
+// Needs Vercel Pro for long runs; Hobby still hard-caps around 10s
+export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
@@ -17,8 +18,8 @@ export async function POST(request) {
     const plan = getPlan();
     const isPro = await isProSession(request);
     const maxSamples = isPro
-      ? Math.min(Number(plan.proMaxSamples) || 10, 10)
-      : Math.min(Number(plan.freeMaxSamples) || 3, 3);
+      ? Math.min(Math.max(Number(plan.proMaxSamples) || 200, 1), 200)
+      : Math.min(Math.max(Number(plan.freeMaxSamples) || 20, 1), 20);
 
     const result = await crawlSite(url, { maxSamples, isPro });
 
