@@ -8,9 +8,11 @@ import {
   getPlan,
   updatePlan,
   getPayments,
+  getPublicPayments,
   updatePayments,
 } from '../../../lib/store.js';
 import { requireAdmin } from '../../../lib/auth.js';
+import { METHOD_DEFS } from '../../../lib/payments.js';
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
@@ -18,14 +20,20 @@ export async function GET(request) {
   if (type === 'ads') return Response.json({ ads: getAds() });
   if (type === 'scripts') return Response.json({ scripts: getScripts() });
   if (type === 'plan') return Response.json({ plan: getPlan() });
-  if (type === 'payments') return Response.json({ payments: getPayments() });
+  if (type === 'payments') {
+    const admin = await requireAdmin(request);
+    if (admin) return Response.json({ payments: getPayments(), methodDefs: METHOD_DEFS });
+    return Response.json({ payments: getPublicPayments() });
+  }
   if (type === 'all') {
+    const admin = await requireAdmin(request);
     return Response.json({
       settings: getSettings(),
       ads: getAds(),
       scripts: getScripts(),
       plan: getPlan(),
-      payments: getPayments(),
+      payments: admin ? getPayments() : getPublicPayments(),
+      methodDefs: admin ? METHOD_DEFS : undefined,
     });
   }
   return Response.json({ settings: getSettings() });
