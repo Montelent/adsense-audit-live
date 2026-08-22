@@ -1,5 +1,5 @@
-const { listBlogs, createBlog, getStats } = require('../../../lib/store');
-const { requireAdmin } = require('../../../lib/auth');
+import { listBlogs, createBlog, getStats } from '../../../lib/store.js';
+import { requireAdmin } from '../../../lib/auth.js';
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
