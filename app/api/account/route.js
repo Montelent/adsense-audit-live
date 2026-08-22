@@ -1,5 +1,5 @@
 import { getUserById, updateUser, updateUserPassword } from '../../../lib/store.js';
-import { requireUser, createToken, sessionCookie } from '../../../lib/auth.js';
+import { requireUser, createToken, jsonWithSession } from '../../../lib/auth.js';
 
 function publicUser(u) {
   if (!u) return null;
@@ -48,13 +48,7 @@ export async function PUT(request) {
 
     const full = await getUserById(session.sub);
     const token = await createToken(full);
-    return new Response(JSON.stringify({ ok: true, user: publicUser(full) }), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Set-Cookie': sessionCookie(token),
-      },
-    });
+    return jsonWithSession({ ok: true, user: publicUser(full) }, token);
   } catch (err) {
     return Response.json({ error: err.message }, { status: 500 });
   }
