@@ -1,4 +1,4 @@
-import { register, createToken, sessionCookie } from '../../../../lib/auth.js';
+import { register, createToken, jsonWithSession } from '../../../../lib/auth.js';
 
 export async function POST(request) {
   try {
@@ -12,9 +12,7 @@ export async function POST(request) {
       return Response.json({ error: result.error }, { status: 400 });
     }
     const token = await createToken(result.user);
-    const res = Response.json({ ok: true, user: result.user });
-    res.headers.set('Set-Cookie', sessionCookie(token));
-    return res;
+    return jsonWithSession({ ok: true, user: result.user }, token);
   } catch (err) {
     return Response.json({ error: err.message }, { status: 500 });
   }
