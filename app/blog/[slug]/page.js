@@ -9,6 +9,7 @@ export default function BlogPostPage() {
   const slug = params?.slug;
   const [post, setPost] = useState(null);
   const [missing, setMissing] = useState(false);
+  const [ads, setAds] = useState({});
 
   useEffect(() => {
     if (!slug) return;
@@ -20,7 +21,15 @@ export default function BlogPostPage() {
         else setMissing(true);
       })
       .catch(() => setMissing(true));
+    fetch('/api/settings?type=ads').then((r) => r.json()).then((d) => setAds(d.ads || {})).catch(() => {});
   }, [slug]);
+
+  const content = post?.content || '';
+  const mid = Math.floor(content.length / 2);
+  const splitAt = content.indexOf('</p>', mid);
+  const hasSplit = splitAt > 0;
+  const first = hasSplit ? content.slice(0, splitAt + 4) : content;
+  const second = hasSplit ? content.slice(splitAt + 4) : '';
 
   return (
     <div>
@@ -39,7 +48,11 @@ export default function BlogPostPage() {
           <article>
             <div className="text-sm text-gray-500 mb-2">{post.createdAt?.slice(0, 10)} · {post.author}</div>
             <h1 className="text-3xl sm:text-4xl font-bold mb-6">{post.title}</h1>
-            <div className="prose max-w-none text-gray-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: post.content || '' }} />
+            {ads.postBegin ? <div className="mb-6" dangerouslySetInnerHTML={{ __html: ads.postBegin }} /> : null}
+            <div className="prose max-w-none text-gray-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: first }} />
+            {ads.postMiddle && hasSplit ? <div className="my-6" dangerouslySetInnerHTML={{ __html: ads.postMiddle }} /> : null}
+            {hasSplit ? <div className="prose max-w-none text-gray-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: second }} /> : null}
+            {ads.postEnd ? <div className="mt-8" dangerouslySetInnerHTML={{ __html: ads.postEnd }} /> : null}
           </article>
         )}
         {!post && !missing && <p className="text-gray-400">Loading…</p>}
