@@ -28,7 +28,7 @@ export default function LoginPage() {
         return;
       }
       if (data.user?.role === 'admin') router.push('/admin');
-      else router.push('/');
+      else router.push('/account');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -45,6 +45,9 @@ export default function LoginPage() {
           <form onSubmit={onSubmit} className="space-y-4">
             <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className="w-full border rounded-xl px-4 py-3" />
             <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" className="w-full border rounded-xl px-4 py-3" />
+            <div className="text-right">
+              <Link href="/forgot-password" className="text-sm text-green-700 font-medium">Forgot password?</Link>
+            </div>
             {error && <p className="text-sm text-red-600">{error}</p>}
             <button type="submit" disabled={loading} className="w-full py-3 bg-green-600 text-white rounded-xl font-semibold disabled:opacity-60">
               {loading ? 'Signing in…' : 'Sign in'}
@@ -53,7 +56,6 @@ export default function LoginPage() {
           <p className="text-sm text-gray-500 mt-6 text-center">
             No account? <Link href="/register" className="text-green-700 font-medium">Create one</Link>
           </p>
-          <p className="text-xs text-gray-400 mt-2 text-center">Admin? Use /admin with admin credentials</p>
         </div>
       </main>
     </SiteChrome>
