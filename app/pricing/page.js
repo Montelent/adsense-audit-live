@@ -30,9 +30,10 @@ export default function PricingPage() {
 
   const p = plan || {};
   const pay = payments || {};
-  const methods = ['paypal', 'paystack', 'monnify', 'usdt', 'usdc', 'bank', 'wire']
-    .map((k) => ({ key: k, ...(pay[k] || {}) }))
-    .filter((m) => m.enabled !== false);
+  // Public API returns methods as objects with lines[]
+  const methods = Object.entries(pay)
+    .filter(([k, v]) => k !== 'instructions' && v && v.enabled)
+    .map(([key, v]) => ({ key, ...v }));
 
   async function submitPaid(e) {
     e.preventDefault();
@@ -108,16 +109,26 @@ export default function PricingPage() {
           <div className="grid sm:grid-cols-2 gap-4">
             {methods.map((m) => (
               <div key={m.key} className="border rounded-xl p-4">
-                <div className="font-semibold text-green-700">{m.label || m.key}</div>
-                <pre className="mt-2 text-xs text-gray-600 whitespace-pre-wrap font-sans">{m.details || 'Configured in Admin'}</pre>
-                {m.paymentLink && (
-                  <a href={m.paymentLink} target="_blank" rel="noreferrer" className="inline-block mt-2 text-sm text-green-700 underline">Open payment link</a>
+                <div className="font-semibold text-green-700 mb-3">{m.label || m.key}</div>
+                {(m.lines || []).length === 0 && (
+                  <p className="text-xs text-gray-400">Details coming soon</p>
                 )}
-                {m.walletAddress && (
-                  <p className="text-xs font-mono mt-2 break-all">{m.network}: {m.walletAddress}</p>
+                <dl className="space-y-2 text-sm">
+                  {(m.lines || []).map((line) => (
+                    <div key={line.label}>
+                      <dt className="text-xs text-gray-500">{line.label}</dt>
+                      <dd className="font-medium text-gray-900 break-all">{line.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+                {m.paymentLink && (
+                  <a href={m.paymentLink} target="_blank" rel="noreferrer" className="inline-block mt-3 text-sm text-green-700 font-medium underline">
+                    Open payment link
+                  </a>
                 )}
               </div>
             ))}
+            {!methods.length && <p className="text-sm text-gray-500">No payment methods configured yet.</p>}
           </div>
 
           <form onSubmit={submitPaid} className="border-t pt-6 space-y-3 max-w-lg">
